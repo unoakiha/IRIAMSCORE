@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>入室&バッジ耐久カウンター</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background-color: #ffa500;
+      text-align: center;
+      color: #fff;
+    }
+    header {
+      background-color: #ffd700;
+      padding: 2em;
+      position: relative;
+    }
+    h1 {
+      margin: 0;
+    }
+    .menu-toggle {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      background-color: transparent;
+      border: none;
+      font-size: 24px;
+      color: #FFFFFF;
+      z-index: 1001;
+      cursor: pointer;
+    }
+    .menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 220px;
+      background-color: #ffa500;
+      padding-top: 60px;
+      height: 100vh;
+      display: none;
+      flex-direction: column;
+      z-index: 1000;
+    }
+    .menu a {
+      color: #FFFFFF;
+      padding: 10px 20px;
+      text-decoration: none;
+      font-weight: bold;
+      display: block;
+      text-align: left;
+    }
+    .menu a:hover {
+      background-color: #e69500;
+    }
+    .wrapper {
+      background-color: #fff;
+      color: #000;
+      max-width: 800px;
+      margin: 1em auto;
+      padding: 1em;
+      border-radius: 8px;
+    }
+    .section {
+      margin: 20px 0;
+    }
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .counter-box {
+      margin: 20px auto;
+      text-align: center;
+      max-width: 500px;
+    }
+    .gift-rescue-entry {
+      margin: 5px 0;
+    }
+    input[type="number"] {
+      width: 80px;
+    }
+    .number-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3em;
+      flex-wrap: wrap;
+    }
+    footer {
+      background-color: #ffa500;
+      padding: 1em;
+    }
+    footer small {
+      color: #ffffff;
+    }
+    @media (max-width: 600px) {
+      input[type="number"] {
+        width: 60px;
+      }
+      .button-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <button class="menu-toggle" onclick="toggleMenu()">☰ MENU</button>
+    <h1>入室&バッジ耐久カウンター</h1>
+  </header>
+
+  <nav class="menu" id="menu">
+    <a href="index.html">ランクスコア計算</a>
+    <a href="counter.html">入室&バッジカウンター</a>
+    <a href="panel.html">パネル開け補助ツール</a>
+  </nav>
+
+  <div class="wrapper">
+    <div class="section">
+      <h2>目標設定</h2>
+      入室目標 → <input type="number" id="roomGoal" value="100"><br>
+      バッジ目標 → <input type="number" id="badgeGoal" value="10"><br><br>
+
+      <h2>救済設定</h2>
+      初見入室 → <input type="number" id="rescueFirst" value="5">人<br>
+      配信ポスト → <input type="number" id="rescuePost" value="3">人<br>
+      <div id="giftRescueList">
+        <div class="gift-rescue-entry">
+          ギフト <input type="number" class="giftPoints" value="100">pt → <input type="number" class="giftPeople" value="10">人
+        </div>
+      </div>
+      <br>
+      <button onclick="addGiftRescueEntry()">ギフト救済を追加</button><br><br>
+
+      <h2>バッジ進化</h2>
+      <label><input type="radio" name="evolve" value="no" checked> 進化なし</label>
+      <label><input type="radio" name="evolve" value="yes"> 進化込み</label>
+
+      <br><br><button onclick="startCounter()">耐久開始</button>
+    </div>
+
+    <div class="section" id="counterSection" style="display:none">
+      <hr>
+      <h2>現在の状況</h2>
+
+      <div class="counter-box">
+        入室数: <span class="number-line"><span id="roomCount">0</span> / <span id="roomGoalDisplay"></span> (残り<span id="roomRemaining"></span>人)</span>
+        <div class="button-group">
+          <button onclick="addRoom(1)">入室+1</button>
+          <button onclick="addRoomByRescue('first')">初見入室</button>
+          <button onclick="addRoomByRescue('post')">配信ポスト</button>
+          <span id="giftRescueButtons"></span>
+          <button onclick="resetRoom()">リセット</button>
+        </div>
+      </div>
+
+      <div class="counter-box">
+        バッジ数: <span class="number-line"><span id="badgeCount">0</span> / <span id="badgeGoalDisplay"></span></span><br>
+        <span id="badgeEvolveDisplay" style="display:none">進化込み: <span id="badgeEvolveCount">0</span> / <span id="badgeGoalDisplay2"></span></span>
+        <div class="button-group">
+          <button onclick="addBadge(1)">バッジ+1</button>
+          <button onclick="addBadgeEvolve(1)">バッジ進化+1</button>
+          <button onclick="resetBadge()">リセット</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <small>制作 : うの <a href="https://x.com/kai_btandis" style="color:#ffffff;">(@kai_btandis)</a></small>
+  </footer>
+
+  <script>
+    let roomCount = 0;
+    let badgeCount = 0;
+    let badgeEvolveCount = 0;
+    let rescueValues = { first: 0, post: 0, gift: [] };
+    let evolveMode = false;
+
+    function addGiftRescueEntry() {
+      const div = document.createElement('div');
+      div.className = 'gift-rescue-entry';
+      div.innerHTML = `ギフト <input type="number" class="giftPoints" value="100">pt → <input type="number" class="giftPeople" value="10">人`;
+      document.getElementById('giftRescueList').appendChild(div);
+    }
+
+    function startCounter() {
+      const roomGoal = parseInt(document.getElementById('roomGoal').value);
+      const badgeGoal = parseInt(document.getElementById('badgeGoal').value);
+      rescueValues.first = parseInt(document.getElementById('rescueFirst').value);
+      rescueValues.post = parseInt(document.getElementById('rescuePost').value);
+      rescueValues.gift = [];
+
+      document.querySelectorAll('.gift-rescue-entry').forEach(el => {
+        const pt = parseInt(el.querySelector('.giftPoints').value);
+        const ppl = parseInt(el.querySelector('.giftPeople').value);
+        if (!isNaN(pt) && !isNaN(ppl)) {
+          rescueValues.gift.push({ pt: pt, ppl: ppl });
+        }
+      });
+
+      evolveMode = document.querySelector('input[name="evolve"]:checked').value === 'yes';
+
+      document.getElementById('roomGoalDisplay').textContent = roomGoal;
+      document.getElementById('badgeGoalDisplay').textContent = badgeGoal;
+      document.getElementById('badgeGoalDisplay2').textContent = badgeGoal;
+      document.getElementById('badgeEvolveDisplay').style.display = evolveMode ? 'block' : 'none';
+
+      const giftBtnArea = document.getElementById('giftRescueButtons');
+      giftBtnArea.innerHTML = '';
+      rescueValues.gift.forEach((g, idx) => {
+        const btn = document.createElement('button');
+        btn.textContent = `${g.pt}ptギフト`;
+        btn.onclick = () => addRoom(g.ppl);
+        giftBtnArea.appendChild(btn);
+      });
+
+      updateDisplay();
+      document.getElementById('counterSection').style.display = 'block';
+    }
+
+    function updateDisplay() {
+      const roomGoal = parseInt(document.getElementById('roomGoal').value);
+      const badgeGoal = parseInt(document.getElementById('badgeGoal').value);
+
+      document.getElementById('roomCount').textContent = roomCount;
+      document.getElementById('roomRemaining').textContent = Math.max(0, roomGoal - roomCount);
+      document.getElementById('badgeCount').textContent = badgeCount;
+
+      if (evolveMode) {
+        document.getElementById('badgeEvolveCount').textContent = badgeEvolveCount;
+      }
+    }
+
+    function addRoom(n) {
+      roomCount += n;
+      updateDisplay();
+    }
+
+    function resetRoom() {
+      roomCount = 0;
+      updateDisplay();
+    }
+
+    function resetBadge() {
+      badgeCount = 0;
+      badgeEvolveCount = 0;
+      updateDisplay();
+    }
+
+    function addRoomByRescue(type) {
+      if (type === 'first') addRoom(rescueValues.first);
+      else if (type === 'post') addRoom(rescueValues.post);
+    }
+
+    function addBadge(n) {
+      badgeCount += n;
+      updateDisplay();
+    }
+
+    function addBadgeEvolve(n) {
+      if (evolveMode) {
+        badgeEvolveCount += n;
+        updateDisplay();
+      }
+    }
+
+    function toggleMenu() {
+      const menu = document.getElementById("menu");
+      menu.style.display = menu.style.display === "flex" ? "none" : "flex";
+    }
+  </script>
+</body>
+</html>
